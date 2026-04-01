@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#00205B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ParamLog" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>ParamLog — Parameter Change Logger</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── TOKENS — Smurfit Westrock Brand ───────────── */
+    :root {
+      --bg:           #00205B;   /* Deep Blue  PMS 281  */
+      --surface:      #041E42;   /* Blue 01    PMS 282  */
+      --surface-2:    #003DA5;   /* Blue 02    PMS 293  */
+      --border:       rgba(8,178,255,0.22);
+      --accent:       #08B2FF;   /* Light Blue PMS 2995 */
+      --accent-dim:   #0070D4;   /* Blue 03    PMS 2195 */
+      --accent-glow:  rgba(8,178,255,0.18);
+      --sky:          #5FCDF5;   /* Blue 04    PMS 2985 */
+      --pale:         #D4EDFC;   /* Blue 05    PMS 290  */
+      --green:        #22c55e;
+      --red:          #ef4444;
+      --text:         #ffffff;
+      --text-muted:   #D4EDFC;
+      --text-dim:     rgba(212,237,252,0.45);
+      --radius:       10px;
+      --radius-lg:    16px;
+    }
+
+    /* ─── BRAND STRIPE ──────────────────────────────── */
+    .brand-stripe {
+      height: 4px;
+      background: linear-gradient(90deg, #00205B 0%, #003DA5 30%, #0070D4 55%, #08B2FF 75%, #5FCDF5 90%, #D4EDFC 100%);
+    }
+
+    /* ─── RESET ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+      overscroll-behavior: none;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #041E42 0%, #00205B 100%);
+      border-bottom: 2px solid var(--accent);
+      padding: 14px 20px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-icon {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-icon svg { width: 22px; height: 22px; fill: #fff; }
+
+    .header-text h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .header-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .header-time {
+      margin-left: auto;
+      text-align: right;
+    }
+    #live-time {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--sky);
+      letter-spacing: 0.03em;
+    }
+    #live-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── MAIN ───────────────────────────────────────── */
+    main {
+      padding: 16px 16px 0;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    /* ─── SECTION LABEL ──────────────────────────────── */
+    .section-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      margin-top: 18px;
+      padding-left: 2px;
+    }
+
+    /* ─── FIELD CARD ─────────────────────────────────── */
+    .field-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .field-card:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .field-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .required-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    select, input[type="text"], textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: 17px;
+      font-weight: 500;
+      padding: 13px 14px;
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    select:focus, input[type="text"]:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    select option { background: #003DA5; color: var(--text); }
+    textarea { resize: none; height: 88px; line-height: 1.5; }
+
+    .select-wrapper {
+      position: relative;
+    }
+    .select-wrapper::after {
+      content: '';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 7px solid var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* ─── CHIP GRID (equipment) ──────────────────────── */
+    .chip-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .chip {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 13px 10px;
+      text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      line-height: 1.1;
+    }
+    .chip .chip-icon { font-size: 20px; }
+    .chip:active { transform: scale(0.96); }
+    .chip.selected {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .chip.selected .chip-icon { filter: none; }
+
+    /* ─── SUBMIT BUTTON ──────────────────────────────── */
+    .submit-wrap {
+      padding: 20px 0 24px;
+    }
+
+    #submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 22px 20px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(8,178,255,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    #submit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    #submit-btn:active { transform: scale(0.98); background: var(--accent-dim); }
+    #submit-btn:disabled { background: var(--text-dim); box-shadow: none; cursor: not-allowed; }
+    #submit-btn svg { width: 28px; height: 28px; fill: #fff; flex-shrink: 0; }
+
+    /* ─── TOAST ──────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      background: var(--green);
+      color: #fff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 16px 28px;
+      border-radius: 50px;
+      white-space: nowrap;
+      z-index: 999;
+      transition: transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(34,197,94,0.4);
+    }
+    #toast.error { background: var(--red); box-shadow: 0 8px 32px rgba(239,68,68,0.4); }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast svg { width: 22px; height: 22px; fill: #fff; }
+
+    /* ─── LOG STRIP ──────────────────────────────────── */
+    .log-section {
+      background: var(--surface);
+      border-top: 2px solid var(--border);
+      padding: 16px;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+    .log-header {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #clear-log {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .log-empty {
+      color: var(--text-dim);
+      font-size: 14px;
+      text-align: center;
+      padding: 12px 0;
+      font-style: italic;
+    }
+
+    .log-entry {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .log-machine {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--sky);
+      min-width: 38px;
+      line-height: 1;
+    }
+    .log-details { flex: 1; }
+    .log-equip {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+    .log-param { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+    .log-meta { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+    /* ─── ADMIN MODAL ────────────────────────────────── */
+
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-top: 2px solid var(--accent);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px calc(env(safe-area-inset-bottom, 20px) + 20px);
+      width: 100%;
+      max-width: 540px;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(80px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    .modal h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .modal input[type="text"] { margin-bottom: 10px; font-size: 15px; }
+    .modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+    .modal-save {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 15px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .modal-close {
+      background: none; border: none;
+      color: var(--text-muted); font-size: 14px;
+      font-family: 'Barlow', sans-serif;
+      cursor: pointer; display: block;
+      margin: 12px auto 0; padding: 6px 16px;
+    }
+
+    /* ─── PIN PAD ────────────────────────────────────── */
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin: 20px 0 24px;
+    }
+    .pin-dots span {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .pin-dots span.filled {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .pin-dots span.shake {
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      60%      { transform: translateX(6px); }
+    }
+    .pin-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 260px;
+      margin: 0 auto;
+    }
+    .pin-key {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      padding: 18px 10px;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.08s;
+      -webkit-user-select: none;
+    }
+    .pin-key:active { background: var(--accent); transform: scale(0.93); }
+    .pin-clear  { color: var(--sky); }
+    .pin-cancel { color: var(--text-dim); font-size: 18px; }
+
+    /* ─── OFFLINE BANNER ─────────────────────────────── */
+    #offline-banner {
+      display: none;
+      background: var(--sky);
+      color: #00205B;
+      text-align: center;
+      padding: 8px 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    body.offline #offline-banner { display: block; }
+
+    /* ─── SPINNER ────────────────────────────────────── */
+    .spinner {
+      width: 22px; height: 22px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #submit-btn.loading .btn-label { display: none; }
+    #submit-btn.loading .spinner { display: block; }
+
+  </style>
+</head>
+<body>
+
+<!-- ── OFFLINE BANNER ─────────────────────────────── -->
+<div id="offline-banner">⚠ No connection — entry saved locally</div>
+
+<!-- ── HEADER ─────────────────────────────────────── -->
+<div class="brand-stripe"></div>
+<header>
+  <div class="header-icon" id="admin-trigger" title="">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C9.24 2 7 4.24 7 7c0 1.86.97 3.49 2.43 4.43L9 20h6l-.43-8.57C16.03 10.49 17 8.86 17 7c0-2.76-2.24-5-5-5zm0 2c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3zM4 22h16v-2H4v2z"/>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>ParamLog</h1>
+    <p>Smurfit Westrock · Parameter Change Logger</p>
+  </div>
+  <div class="header-time">
+    <div id="live-time">—</div>
+    <div id="live-date">—</div>
+  </div>
+</header>
+
+<!-- ── MAIN FORM ───────────────────────────────────── -->
+<main>
+
+  <!-- Operator -->
+  <div class="section-label">Operator</div>
+  <div class="field-card">
+    <div class="field-label"><span class="required-dot"></span> Your Name</div>
+    <div class="select-wrapper">
+      <select id="operator">
+        <option value="">— Select operator —</option>
+        <option>John Smith</option>
+        <option>Maria Garcia</option>
+        <option>Carlos Rivera</option>
+        <option>Ana Ferreira</option>
+        <option>Lukas Weber</option>
+        <option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Machine -->
+  <div class="section-label">Machine</div>
+  <div class="field-card">
+    <div class="field-label"><span class="required-dot"></span> Machine Number</div>
+    <div class="select-wrapper">
+      <select id="machine">
+        <option value="">— Select machine —</option>
+        <option>Machine 1</option>
+        <option>Machine 2</option>
+        <option>Machine 3</option>
+        <option>Machine 4</option>
+        <option>Machine 5</option>
+        <option>Machine 6</option>
+        <option>Machine 7</option>
+        <option>Machine 8</option>
+        <option>Machine 9</option>
+        <option>Machine 10</option>
+        <option>Machine 11</option>
+        <option>Machine 12</option>
+        <option>Machine 13</option>
+        <option>Machine 14</option>
+        <option>Machine 15</option>
+        <option>Machine 16</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Equipment -->
+  <div class="section-label">Equipment Changed</div>
+  <div class="field-card">
+    <div class="field-label"><span class="required-dot"></span> Select equipment</div>
+    <div class="chip-grid">
+      <div class="chip" data-value="Injection Machine" onclick="selectChip(this)">
+        <span class="chip-icon">💉</span>Injection Machine
+      </div>
+      <div class="chip" data-value="Robot" onclick="selectChip(this)">
+        <span class="chip-icon">🦾</span>Robot
+      </div>
+      <div class="chip" data-value="Grinder" onclick="selectChip(this)">
+        <span class="chip-icon">⚙️</span>Grinder
+      </div>
+      <div class="chip" data-value="Cooling" onclick="selectChip(this)">
+        <span class="chip-icon">❄️</span>Cooling
+      </div>
+      <div class="chip" data-value="Hot Runner" onclick="selectChip(this)">
+        <span class="chip-icon">🔥</span>Hot Runner
+      </div>
+      <div class="chip" data-value="Other" onclick="selectChip(this)">
+        <span class="chip-icon">🔧</span>Other
+      </div>
+    </div>
+    <input type="hidden" id="equipment" />
+  </div>
+
+  <!-- Parameter -->
+  <div class="section-label">Parameter Changed</div>
+  <div class="field-card">
+    <div class="field-label"><span class="required-dot"></span> Describe the change</div>
+    <input type="text" id="parameter" placeholder="e.g. Injection pressure 80 → 95 bar" autocomplete="off" />
+  </div>
+
+  <!-- Comment -->
+  <div class="section-label">Comment <span style="color:var(--text-dim);font-size:10px;font-weight:400;text-transform:none;">(optional)</span></div>
+  <div class="field-card">
+    <div class="field-label">Additional notes</div>
+    <textarea id="comment" placeholder="Reason for change, part number, shift…"></textarea>
+  </div>
+
+  <!-- Submit -->
+  <div class="submit-wrap">
+    <button id="submit-btn" onclick="submitChange()">
+      <svg class="btn-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+      <span class="btn-label">Submit Change</span>
+      <div class="spinner"></div>
+    </button>
+  </div>
+
+</main>
+
+<!-- ── RECENT LOG ───────────────────────────────────── -->
+<div class="log-section">
+  <div class="log-header">
+    Recent (this session)
+    <button id="clear-log" onclick="clearLog()">Clear</button>
+  </div>
+  <div id="log-list">
+    <div class="log-empty">No entries yet this session.</div>
+  </div>
+</div>
+
+<!-- ── TOAST ───────────────────────────────────────── -->
+<div id="toast">
+  <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+  <span id="toast-msg">Change logged successfully.</span>
+</div>
+
+
+<!-- ── PIN MODAL ────────────────────────────────────── -->
+<div class="modal-overlay" id="pin-modal" onclick="closePinOutside(event)">
+  <div class="modal">
+    <h2>🔒 Admin Access</h2>
+    <p>Enter the supervisor PIN to access settings.</p>
+    <div class="pin-dots" id="pin-dots">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key pin-clear" onclick="pinClear()">⌫</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key pin-cancel" onclick="closePin()">✕</button>
+    </div>
+    <p id="pin-error" style="color:#ef4444;text-align:center;margin-top:8px;display:none;">Incorrect PIN. Try again.</p>
+  </div>
+</div>
+
+<!-- ── ADMIN MODAL ───────────────────────────────────── -->
+<div class="modal-overlay" id="admin-modal" onclick="closeAdminOutside(event)">
+  <div class="modal">
+    <h2>⚙ Supervisor Settings</h2>
+    <p>Webhook is hardcoded in the app. Use this panel to change the admin PIN.</p>
+
+    <div class="field-label" style="margin-bottom:6px;">Change Admin PIN</div>
+    <input type="text" id="new-pin" placeholder="Enter new 4-digit PIN" maxlength="4" inputmode="numeric" />
+
+    <button class="modal-save" onclick="saveAdminConfig()">Save Settings</button>
+    <button class="modal-close" onclick="closeAdmin()">Close</button>
+  </div>
+</div>
+
+
+<!-- ── SCRIPTS ─────────────────────────────────────── -->
+<script>
+
+  /* ── CONFIGURATION (set by supervisor before deploying) ── */
+  const WEBHOOK_URL = 'YOUR_WEBHOOK_URL_HERE';
+  // Paste your full Power Automate or Teams webhook URL above.
+  // Example: 'https://prod.webhook.office.com/webhookb2/abc123...'
+
+  /* ── LIVE CLOCK ─────────────────────────────────── */
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('live-time').textContent = `${h}:${m}`;
+    const opts = { weekday:'short', month:'short', day:'numeric' };
+    document.getElementById('live-date').textContent = now.toLocaleDateString('en-US', opts);
+  }
+  updateClock();
+  setInterval(updateClock, 10000);
+
+  /* ── CHIP SELECT ─────────────────────────────────── */
+  function selectChip(el) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('equipment').value = el.dataset.value;
+  }
+
+  /* ── ADMIN: SECRET TAP TRIGGER (5 taps on logo) ──── */
+  let tapCount = 0, tapTimer;
+  document.getElementById('admin-trigger').addEventListener('click', () => {
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
+    if (tapCount >= 5) { tapCount = 0; openPin(); }
+  });
+
+  /* ── PIN MODAL ───────────────────────────────────── */
+  let pinBuffer = '';
+  const DEFAULT_PIN = '1234'; // Change this before deploying
+
+  function openPin() {
+    pinBuffer = '';
+    updatePinDots();
+    document.getElementById('pin-error').style.display = 'none';
+    document.getElementById('pin-modal').classList.add('open');
+  }
+  function closePin() {
+    pinBuffer = '';
+    document.getElementById('pin-modal').classList.remove('open');
+  }
+  function closePinOutside(e) {
+    if (e.target === document.getElementById('pin-modal')) closePin();
+  }
+  function pinKey(digit) {
+    if (pinBuffer.length >= 4) return;
+    pinBuffer += digit;
+    updatePinDots();
+    if (pinBuffer.length === 4) {
+      setTimeout(checkPin, 150);
+    }
+  }
+  function pinClear() {
+    pinBuffer = pinBuffer.slice(0, -1);
+    updatePinDots();
+  }
+  function updatePinDots() {
+    document.querySelectorAll('.pin-dots span').forEach((d, i) => {
+      d.classList.toggle('filled', i < pinBuffer.length);
+    });
+  }
+  function checkPin() {
+    const stored = localStorage.getItem('adminPin') || DEFAULT_PIN;
+    if (pinBuffer === stored) {
+      closePin();
+      openAdmin();
+    } else {
+      pinBuffer = '';
+      updatePinDots();
+      document.getElementById('pin-error').style.display = 'block';
+      document.querySelectorAll('.pin-dots span').forEach(d => {
+        d.classList.add('shake');
+        setTimeout(() => d.classList.remove('shake'), 400);
+      });
+    }
+  }
+
+  /* ── ADMIN MODAL ─────────────────────────────────── */
+  function openAdmin() {
+    document.getElementById('new-pin').value = '';
+    document.getElementById('admin-modal').classList.add('open');
+  }
+  function closeAdmin() {
+    document.getElementById('admin-modal').classList.remove('open');
+  }
+  function closeAdminOutside(e) {
+    if (e.target === document.getElementById('admin-modal')) closeAdmin();
+  }
+  function saveAdminConfig() {
+    const newPin = document.getElementById('new-pin').value.trim();
+    if (newPin.length === 4 && /^[0-9]{4}$/.test(newPin)) {
+      localStorage.setItem('adminPin', newPin);
+    } else if (newPin.length > 0) {
+      showToast('⚠ PIN must be 4 digits', true); return;
+    }
+    closeAdmin();
+    showToast('PIN updated ✓', false);
+  }
+
+  /* ── OFFLINE DETECTION ───────────────────────────── */
+  window.addEventListener('online',  () => document.body.classList.remove('offline'));
+  window.addEventListener('offline', () => document.body.classList.add('offline'));
+  if (!navigator.onLine) document.body.classList.add('offline');
+
+  /* ── TOAST ───────────────────────────────────────── */
+  let toastTimer;
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    t.classList.remove('error');
+    if (isError) t.classList.add('error');
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  /* ── LOCAL LOG ───────────────────────────────────── */
+  const logEntries = [];
+  function renderLog() {
+    const el = document.getElementById('log-list');
+    if (logEntries.length === 0) {
+      el.innerHTML = '<div class="log-empty">No entries yet this session.</div>';
+      return;
+    }
+    el.innerHTML = logEntries.slice().reverse().map(e => `
+      <div class="log-entry">
+        <div class="log-machine">${e.machine.replace('Machine ','M')}</div>
+        <div class="log-details">
+          <div class="log-equip">${e.equipment}</div>
+          <div class="log-param">${e.parameter}</div>
+          <div class="log-meta">${e.operator} · ${e.timestamp}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  function clearLog() { logEntries.length = 0; renderLog(); }
+
+  /* ── SUBMIT ──────────────────────────────────────── */
+  async function submitChange() {
+    const machine   = document.getElementById('machine').value;
+    const equipment = document.getElementById('equipment').value;
+    const parameter = document.getElementById('parameter').value.trim();
+    const operator  = document.getElementById('operator').value;
+    const comment   = document.getElementById('comment').value.trim();
+
+    /* Validation */
+    if (!machine)   { showToast('⚠ Select a machine', true); return; }
+    if (!equipment) { showToast('⚠ Select equipment', true); return; }
+    if (!parameter) { showToast('⚠ Enter parameter changed', true); return; }
+
+    /* Timestamp */
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', {
+      hour: '2-digit', minute: '2-digit',
+      month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const payload = { machine, equipment, parameter, operator: operator || 'Unknown', comment, timestamp };
+
+    /* Loading state */
+    const btn = document.getElementById('submit-btn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    /* Send to webhook */
+    const webhookUrl = WEBHOOK_URL;
+    let sent = false;
+    if (webhookUrl) {
+      try {
+        const teamsMsg = buildTeamsCard(payload);
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(teamsMsg)
+        });
+        sent = response.ok;
+      } catch (err) {
+        console.warn('Webhook failed:', err);
+      }
+    }
+
+    /* Store in localStorage as backup */
+    try {
+      const stored = JSON.parse(localStorage.getItem('paramlog_history') || '[]');
+      stored.push({ ...payload, sent });
+      localStorage.setItem('paramlog_history', JSON.stringify(stored.slice(-500)));
+    } catch(e) {}
+
+    /* Add to session log */
+    logEntries.push(payload);
+    renderLog();
+
+    /* Reset form */
+    document.getElementById('machine').value = '';
+    document.getElementById('equipment').value = '';
+    document.getElementById('parameter').value = '';
+    document.getElementById('comment').value = '';
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+
+    btn.classList.remove('loading');
+    btn.disabled = false;
+
+    showToast(sent ? '✓ Change logged & supervisor notified' : '✓ Change logged successfully.');
+
+    /* Scroll to top */
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── BUILD TEAMS ADAPTIVE CARD ───────────────────── */
+  function buildTeamsCard(p) {
+    return {
+      type: "message",
+      attachments: [{
+        contentType: "application/vnd.microsoft.card.adaptive",
+        content: {
+          "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+          type: "AdaptiveCard",
+          version: "1.4",
+          body: [
+            {
+              type: "TextBlock",
+              text: "🚨 Machine Parameter Change",
+              weight: "Bolder",
+              size: "Large",
+              color: "Attention"
+            },
+            {
+              type: "FactSet",
+              facts: [
+                { title: "Machine",    value: p.machine },
+                { title: "Equipment",  value: p.equipment },
+                { title: "Parameter",  value: p.parameter },
+                { title: "Operator",   value: p.operator },
+                { title: "Time",       value: p.timestamp },
+                ...(p.comment ? [{ title: "Comment", value: p.comment }] : [])
+              ]
+            },
+            {
+              type: "TextBlock",
+              text: "⚠ Please verify machine settings before next production run.",
+              wrap: true,
+              color: "Warning",
+              weight: "Bolder"
+            }
+          ]
+        }
+      }]
+    };
+  }
+
+  /* ── SERVICE WORKER ──────────────────────────────── */
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+</script>
+</body>
+</html>
