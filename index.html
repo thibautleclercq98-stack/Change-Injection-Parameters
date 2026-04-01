@@ -573,12 +573,12 @@
         <option>IM07</option>
         <option>IM08</option>
         <option>IM09</option>
-        <option>IM010</option>
-        <option>IM011</option>
-        <option>IM012</option>
-        <option>IM013</option>
-        <option>IM014</option>
-        <option>IM015</option>
+        <option>IM10</option>
+        <option>IM11</option>
+        <option>IM12</option>
+        <option>IM13</option>
+        <option>IM14</option>
+        <option>IM15</option>
         </select>
     </div>
   </div>
@@ -829,7 +829,7 @@
     }
     el.innerHTML = logEntries.slice().reverse().map(e => `
       <div class="log-entry">
-        <div class="log-machine">${e.machine.replace('Machine ','M')}</div>
+        <div class="log-machine">${e.machine}</div>
         <div class="log-details">
           <div class="log-equip">${e.equipment}</div>
           <div class="log-param">${e.parameter}</div>
@@ -872,11 +872,10 @@
     let sent = false;
     if (webhookUrl) {
       try {
-        const teamsMsg = buildTeamsCard(payload);
         const response = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(teamsMsg)
+          body: JSON.stringify(payload)
         });
         sent = response.ok;
       } catch (err) {
@@ -911,47 +910,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  /* ── BUILD TEAMS ADAPTIVE CARD ───────────────────── */
-  function buildTeamsCard(p) {
-    return {
-      type: "message",
-      attachments: [{
-        contentType: "application/vnd.microsoft.card.adaptive",
-        content: {
-          "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-          type: "AdaptiveCard",
-          version: "1.4",
-          body: [
-            {
-              type: "TextBlock",
-              text: "🚨 Machine Parameter Change",
-              weight: "Bolder",
-              size: "Large",
-              color: "Attention"
-            },
-            {
-              type: "FactSet",
-              facts: [
-                { title: "Machine",    value: p.machine },
-                { title: "Equipment",  value: p.equipment },
-                { title: "Parameter",  value: p.parameter },
-                { title: "Operator",   value: p.operator },
-                { title: "Time",       value: p.timestamp },
-                ...(p.comment ? [{ title: "Comment", value: p.comment }] : [])
-              ]
-            },
-            {
-              type: "TextBlock",
-              text: "⚠ Please verify machine settings before next production run.",
-              wrap: true,
-              color: "Warning",
-              weight: "Bolder"
-            }
-          ]
-        }
-      }]
-    };
-  }
+  /* ── PAYLOAD: plain JSON → Power Automate builds the card ── */
 
   /* ── SERVICE WORKER ──────────────────────────────── */
   if ('serviceWorker' in navigator) {
