@@ -714,6 +714,28 @@
   updateClock();
   setInterval(updateClock, 10000);
 
+  /* ── AUTO-SELECT MACHINE FROM URL PARAM ─────────── */
+  // e.g. ?machine=IM7 pre-selects that machine and locks the dropdown
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const m = params.get('machine');
+    if (m) {
+      const sel = document.getElementById('machine');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === m) {
+          sel.selectedIndex = i;
+          sel.disabled = true;
+          break;
+        }
+      }
+      const card = sel.closest('.field-card');
+      const badge = document.createElement('div');
+      badge.style.cssText = 'margin-top:8px;font-size:12px;color:var(--sky);font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;';
+      badge.textContent = '📍 Pre-selected from QR code';
+      card.appendChild(badge);
+    }
+  })();
+
   /* ── CHIP SELECT ─────────────────────────────────── */
   function selectChip(el) {
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
