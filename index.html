@@ -715,14 +715,20 @@
   setInterval(updateClock, 10000);
 
   /* ── AUTO-SELECT MACHINE FROM URL PARAM ─────────── */
-  // e.g. ?machine=IM7 pre-selects that machine and locks the dropdown
+  // e.g. ?machine=IM7 or ?machine=IM07 pre-selects and locks the dropdown
   (function() {
+    const normalizeMachine = (value) => {
+      if (!value) return '';
+      const match = String(value).trim().toUpperCase().match(/^IM(\d{1,2})$/);
+      if (!match) return String(value).trim().toUpperCase();
+      return `IM${match[1].padStart(2, '0')}`;
+    };
     const params = new URLSearchParams(window.location.search);
-    const m = params.get('machine');
+    const m = normalizeMachine(params.get('machine'));
     if (m) {
       const sel = document.getElementById('machine');
       for (let i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === m) {
+        if (normalizeMachine(sel.options[i].value) === m) {
           sel.selectedIndex = i;
           sel.disabled = true;
           break;
@@ -741,6 +747,25 @@
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
     document.getElementById('equipment').value = el.dataset.value;
+  }
+
+  /* ── STORAGE HELPERS ─────────────────────────────── */
+  function getLocalStorageItem(key, fallback = null) {
+    try {
+      return localStorage.getItem(key) ?? fallback;
+    } catch (err) {
+      console.warn(`Unable to read localStorage key "${key}"`, err);
+      return fallback;
+    }
+  }
+  function setLocalStorageItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (err) {
+      console.warn(`Unable to write localStorage key "${key}"`, err);
+      return false;
+    }
   }
 
   /* ── ADMIN: SECRET TAP TRIGGER (5 taps on logo) ──── */
@@ -787,7 +812,7 @@
     });
   }
   function checkPin() {
-    const stored = localStorage.getItem('adminPin') || DEFAULT_PIN;
+    const stored = getLocalStorageItem('adminPin') || DEFAULT_PIN;
     if (pinBuffer === stored) {
       closePin();
       openAdmin();
@@ -816,7 +841,7 @@
   function saveAdminConfig() {
     const newPin = document.getElementById('new-pin').value.trim();
     if (newPin.length === 4 && /^[0-9]{4}$/.test(newPin)) {
-      localStorage.setItem('adminPin', newPin);
+      setLocalStorageItem('adminPin', newPin);
     } else if (newPin.length > 0) {
       showToast('⚠ PIN must be 4 digits', true); return;
     }
@@ -849,16 +874,38 @@
       el.innerHTML = '<div class="log-empty">No entries yet this session.</div>';
       return;
     }
-    el.innerHTML = logEntries.slice().reverse().map(e => `
-      <div class="log-entry">
-        <div class="log-machine">${e.machine}</div>
-        <div class="log-details">
-          <div class="log-equip">${e.equipment}</div>
-          <div class="log-param">${e.parameter}</div>
-          <div class="log-meta">${e.operator} · ${e.timestamp}</div>
-        </div>
-      </div>
-    `).join('');
+    el.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+    logEntries.slice().reverse().forEach((entry) => {
+      const container = document.createElement('div');
+      container.className = 'log-entry';
+
+      const machineEl = document.createElement('div');
+      machineEl.className = 'log-machine';
+      machineEl.textContent = entry.machine;
+
+      const detailsEl = document.createElement('div');
+      detailsEl.className = 'log-details';
+
+      const equipEl = document.createElement('div');
+      equipEl.className = 'log-equip';
+      equipEl.textContent = entry.equipment;
+
+      const paramEl = document.createElement('div');
+      paramEl.className = 'log-param';
+      paramEl.textContent = entry.parameter;
+
+      const metaEl = document.createElement('div');
+      metaEl.className = 'log-meta';
+      metaEl.textContent = `${entry.operator} · ${entry.timestamp}`;
+
+      detailsEl.append(equipEl, paramEl, metaEl);
+      container.append(machineEl, detailsEl);
+      fragment.appendChild(container);
+    });
+
+    el.appendChild(fragment);
   }
   function clearLog() { logEntries.length = 0; renderLog(); }
 
@@ -871,6 +918,7 @@
     const comment   = document.getElementById('comment').value.trim();
 
     /* Validation */
+    if (!operator)  { showToast('⚠ Select an operator', true); return; }
     if (!machine)   { showToast('⚠ Select a machine', true); return; }
     if (!equipment) { showToast('⚠ Select equipment', true); return; }
     if (!parameter) { showToast('⚠ Enter parameter changed', true); return; }
@@ -890,26 +938,33 @@
     btn.disabled = true;
 
     /* Send to webhook */
-    const webhookUrl = WEBHOOK_URL;
+    const webhookUrl = WEBHOOK_URL.trim();
     let sent = false;
-    if (webhookUrl) {
+    if (webhookUrl && /^https?:\/\//i.test(webhookUrl)) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
       try {
         const response = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
         sent = response.ok;
       } catch (err) {
         console.warn('Webhook failed:', err);
+      } finally {
+        clearTimeout(timeoutId);
       }
+    } else if (webhookUrl) {
+      console.warn('Invalid WEBHOOK_URL configured. Skipping webhook call.');
     }
 
     /* Store in localStorage as backup */
     try {
-      const stored = JSON.parse(localStorage.getItem('paramlog_history') || '[]');
+      const stored = JSON.parse(getLocalStorageItem('paramlog_history', '[]') || '[]');
       stored.push({ ...payload, sent });
-      localStorage.setItem('paramlog_history', JSON.stringify(stored.slice(-500)));
+      setLocalStorageItem('paramlog_history', JSON.stringify(stored.slice(-500)));
     } catch(e) {}
 
     /* Add to session log */
@@ -917,9 +972,13 @@
     renderLog();
 
     /* Reset form */
-    document.getElementById('machine').value = '';
+    const machineSelect = document.getElementById('machine');
+    if (!machineSelect.disabled) {
+      machineSelect.value = '';
+    }
     document.getElementById('equipment').value = '';
     document.getElementById('parameter').value = '';
+    document.getElementById('operator').value = '';
     document.getElementById('comment').value = '';
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
 

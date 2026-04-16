@@ -1,5 +1,5 @@
-/* ParamLog Service Worker v1.0 */
-const CACHE = 'paramlog-v1';
+/* ParamLog Service Worker v1.1 */
+const CACHE = 'paramlog-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -7,9 +7,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.allSettled(ASSETS.map(asset => cache.add(asset)));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', e => {
@@ -23,6 +25,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   /* Network first for POST (webhooks), cache first for assets */
   if (e.request.method === 'POST') return;
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(cached => {
       const network = fetch(e.request).then(res => {
